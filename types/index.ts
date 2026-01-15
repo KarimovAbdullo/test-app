@@ -1,4 +1,5 @@
 export type LessonStatus = 'done' | 'active' | 'locked';
+console.log('LessonStatus');
 
 export interface Lesson {
   id: number;
