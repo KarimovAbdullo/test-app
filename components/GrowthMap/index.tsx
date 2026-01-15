@@ -1,14 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   FlatList,
   StyleSheet,
   SafeAreaView,
-  Alert,
   StatusBar,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import Toast from 'react-native-toast-message';
 import { LessonItem } from '../LessonItem';
+import { LessonModal } from '../LessonModal';
 import { Lesson } from '../../types';
 
 const LESSONS_DATA: Lesson[] = [
@@ -20,73 +22,35 @@ const LESSONS_DATA: Lesson[] = [
 ];
 
 export const GrowthMap: React.FC = () => {
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
+
   const handleLessonPress = (lesson: Lesson) => {
     switch (lesson.status) {
       case 'active':
         console.log('Start lesson');
-        Alert.alert(
-          '🚀 Начать урок',
-          `Вы готовы начать урок "${lesson.title}"?\n\nЭтот урок станет важным шагом на вашем пути развития.`,
-          [
-            { 
-              text: '❌ Отмена', 
-              style: 'cancel',
-              onPress: () => console.log('Cancelled')
-            },
-            { 
-              text: '▶️ Начать', 
-              style: 'default',
-              onPress: () => {
-                console.log('Start lesson');
-                Alert.alert('✅ Успех!', 'Урок успешно начат!');
-              }
-            },
-          ],
-          { 
-            cancelable: true,
-            userInterfaceStyle: 'light'
-          }
-        );
+        setSelectedLesson(lesson);
+        setModalVisible(true);
         break;
       case 'locked':
-        Alert.alert(
-          '🔒 Урок заблокирован',
-          `Урок "${lesson.title}" пока недоступен.\n\nСначала необходимо завершить предыдущие уроки. Каждый урок важен для открытия следующего.`,
-          [{ 
-            text: '👍 Понятно', 
-            style: 'default',
-            onPress: () => console.log('Understood locked lesson')
-          }],
-          { 
-            cancelable: true,
-            userInterfaceStyle: 'light'
-          }
-        );
+        Toast.show({
+          type: 'info',
+          text1: '🔒 Урок заблокирован',
+          text2: `Урок "${lesson.title}" пока недоступен. Сначала необходимо завершить предыдущие уроки.`,
+          position: 'top',
+          topOffset: 60,
+          visibilityTime: 3000,
+        });
         break;
       case 'done':
-        Alert.alert(
-          '✅ Урок завершен',
-          `Урок "${lesson.title}" уже успешно завершен.\n\nПри желании вы можете пересмотреть материал.`,
-          [
-            { 
-              text: '❌ Нет, спасибо', 
-              style: 'cancel',
-              onPress: () => console.log('No review needed')
-            },
-            { 
-              text: '🔄 Пересмотреть', 
-              style: 'default',
-              onPress: () => {
-                console.log('Review lesson');
-                Alert.alert('📚 Пересмотр', 'Материалы урока загружаются...');
-              }
-            },
-          ],
-          { 
-            cancelable: true,
-            userInterfaceStyle: 'light'
-          }
-        );
+        Toast.show({
+          type: 'success',
+          text1: '✅ Урок завершен',
+          text2: `Урок "${lesson.title}" уже успешно завершен.`,
+          position: 'top',
+          topOffset: 60,
+          visibilityTime: 2000,
+        });
         break;
     }
   };
@@ -105,42 +69,59 @@ export const GrowthMap: React.FC = () => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      <FlatList
-        data={LESSONS_DATA}
-        renderItem={renderLessonItem}
-        keyExtractor={(item) => item.id.toString()}
-        ListHeaderComponent={renderHeader}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.listContainer}
+    <>
+      <LinearGradient
+        colors={['#f8fafc', '#e0e7ff', '#f0f9ff']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={styles.container}
+      >
+        <SafeAreaView style={styles.safeArea}>
+          <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+          <FlatList
+            data={LESSONS_DATA}
+            renderItem={renderLessonItem}
+            keyExtractor={(item) => item.id.toString()}
+            ListHeaderComponent={renderHeader}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.listContainer}
+          />
+        </SafeAreaView>
+      </LinearGradient>
+      <LessonModal
+        visible={modalVisible}
+        lesson={selectedLesson}
+        onClose={() => setModalVisible(false)}
       />
-    </SafeAreaView>
+    </>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+  },
+  safeArea: {
+    flex: 1,
   },
   listContainer: {
-    paddingBottom: 20,
+    paddingBottom: 30,
   },
   header: {
     paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 16,
+    paddingBottom: 24,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#1f2937',
+    fontSize: 36,
+    fontWeight: '800',
+    color: '#1e293b',
     marginBottom: 8,
+    letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 16,
-    color: '#6b7280',
+    color: '#64748b',
     lineHeight: 24,
   },
 });

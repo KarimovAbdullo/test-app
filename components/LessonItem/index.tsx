@@ -1,16 +1,87 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
-  Dimensions,
+  Animated,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { LessonItemProps } from '../../types';
 
-const { width } = Dimensions.get('window');
-
 export const LessonItem: React.FC<LessonItemProps> = ({ lesson, onPress }) => {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        tension: 50,
+        friction: 7,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    if (lesson.status === 'active') {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.05,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    }
+  }, [lesson.status]);
+
+  const handlePress = () => {
+    if (lesson.status === 'locked') {
+      shakeAnim.setValue(0);
+      Animated.sequence([
+        Animated.timing(shakeAnim, {
+          toValue: 10,
+          duration: 50,
+          useNativeDriver: true,
+        }),
+        Animated.timing(shakeAnim, {
+          toValue: -10,
+          duration: 50,
+          useNativeDriver: true,
+        }),
+        Animated.timing(shakeAnim, {
+          toValue: 10,
+          duration: 50,
+          useNativeDriver: true,
+        }),
+        Animated.timing(shakeAnim, {
+          toValue: -10,
+          duration: 50,
+          useNativeDriver: true,
+        }),
+        Animated.timing(shakeAnim, {
+          toValue: 0,
+          duration: 50,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+    onPress(lesson);
+  };
+
   const getStatusIcon = () => {
     switch (lesson.status) {
       case 'done':
@@ -24,102 +95,133 @@ export const LessonItem: React.FC<LessonItemProps> = ({ lesson, onPress }) => {
     }
   };
 
-  const getContainerStyle = () => {
-    switch (lesson.status) {
-      case 'done':
-        return [styles.container, styles.doneContainer];
-      case 'active':
-        return [styles.container, styles.activeContainer];
-      case 'locked':
-        return [styles.container, styles.lockedContainer];
-      default:
-        return styles.container;
+  const isLocked = lesson.status === 'locked';
+
+  const renderContent = () => {
+    if (lesson.status === 'done') {
+      return (
+        <LinearGradient
+          colors={['#10b981', '#059669']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.gradientContainer}
+        >
+          <View style={styles.content}>
+            <View style={[styles.iconContainer, styles.doneIconContainer]}>
+              <Text style={styles.doneIcon}>{getStatusIcon()}</Text>
+            </View>
+            <View style={styles.textContainer}>
+              <Text style={styles.doneTitle}>{lesson.title}</Text>
+              <Text style={styles.doneSubtitle}>Завершено</Text>
+            </View>
+          </View>
+        </LinearGradient>
+      );
     }
+
+    if (lesson.status === 'active') {
+      return (
+        <Animated.View
+          style={{
+            transform: [{ scale: pulseAnim }],
+          }}
+        >
+          <LinearGradient
+            colors={['#3b82f6', '#2563eb', '#1d4ed8']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.gradientContainer}
+          >
+            <View style={styles.content}>
+              <View style={[styles.iconContainer, styles.activeIconContainer]}>
+                <Text style={styles.activeIcon}>{getStatusIcon()}</Text>
+              </View>
+              <View style={styles.textContainer}>
+                <Text style={styles.activeTitle}>{lesson.title}</Text>
+                <Text style={styles.activeSubtitle}>Нажмите для начала</Text>
+              </View>
+              <View style={styles.playButton}>
+                <Text style={styles.playIcon}>▶</Text>
+              </View>
+            </View>
+          </LinearGradient>
+        </Animated.View>
+      );
+    }
+
+    return (
+      <View style={styles.lockedContainer}>
+        <View style={styles.content}>
+          <View style={[styles.iconContainer, styles.lockedIconContainer]}>
+            <Text style={styles.lockedIcon}>{getStatusIcon()}</Text>
+          </View>
+          <View style={styles.textContainer}>
+            <Text style={styles.lockedTitle}>{lesson.title}</Text>
+            <Text style={styles.lockedSubtitle}>Заблокировано</Text>
+          </View>
+        </View>
+      </View>
+    );
   };
 
-  const getTextStyle = () => {
-    switch (lesson.status) {
-      case 'done':
-        return [styles.title, styles.doneText];
-      case 'active':
-        return [styles.title, styles.activeText];
-      case 'locked':
-        return [styles.title, styles.lockedText];
-      default:
-        return styles.title;
-    }
-  };
+  const getAnimatedStyle = () => {
+    const baseStyle = {
+      opacity: fadeAnim,
+      transform: [{ scale: scaleAnim }],
+    };
 
-  const getIconStyle = () => {
-    switch (lesson.status) {
-      case 'done':
-        return [styles.icon, styles.doneIcon];
-      case 'active':
-        return [styles.icon, styles.activeIcon];
-      case 'locked':
-        return [styles.icon, styles.lockedIcon];
-      default:
-        return styles.icon;
+    if (isLocked) {
+      return {
+        ...baseStyle,
+        transform: [
+          { scale: scaleAnim },
+          { translateX: shakeAnim },
+        ],
+      };
     }
+
+    return baseStyle;
   };
 
   return (
-    <TouchableOpacity
-      style={getContainerStyle()}
-      onPress={() => onPress(lesson)}
-      activeOpacity={lesson.status === 'locked' ? 1 : 0.7}
+    <Animated.View
+      style={[
+        styles.wrapper,
+        getAnimatedStyle(),
+      ]}
     >
-      <View style={styles.content}>
-        <View style={styles.iconContainer}>
-          <Text style={getIconStyle()}>{getStatusIcon()}</Text>
-        </View>
-        <View style={styles.textContainer}>
-          <Text style={getTextStyle()}>{lesson.title}</Text>
-          <Text style={styles.subtitle}>
-            {lesson.status === 'done' && 'Завершено'}
-            {lesson.status === 'active' && 'Нажмите для начала'}
-            {lesson.status === 'locked' && 'Заблокировано'}
-          </Text>
-        </View>
-        <View style={styles.statusIndicator}>
-          <View style={[
-            styles.indicator,
-            lesson.status === 'done' && styles.doneIndicator,
-            lesson.status === 'active' && styles.activeIndicator,
-            lesson.status === 'locked' && styles.lockedIndicator,
-          ]} />
-        </View>
-      </View>
-    </TouchableOpacity>
+      <TouchableOpacity
+        onPress={handlePress}
+        activeOpacity={isLocked ? 1 : 0.8}
+      >
+        {renderContent()}
+      </TouchableOpacity>
+    </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  wrapper: {
     marginHorizontal: 20,
-    marginVertical: 8,
-    borderRadius: 16,
+    marginVertical: 10,
+    borderRadius: 20,
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 4,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
   },
-  doneContainer: {
-    backgroundColor: '#f0f9ff',
-    borderWidth: 1,
-    borderColor: '#22c55e',
-  },
-  activeContainer: {
-    backgroundColor: '#ffffff',
-    borderWidth: 2,
-    borderColor: '#3b82f6',
+  gradientContainer: {
+    borderRadius: 20,
+    overflow: 'hidden',
   },
   lockedContainer: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#f1f5f9',
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: '#e2e8f0',
   },
@@ -129,62 +231,81 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
   },
-  icon: {
-    fontSize: 20,
-    fontWeight: 'bold',
+  doneIconContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+  },
+  activeIconContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+  },
+  lockedIconContainer: {
+    backgroundColor: '#cbd5e1',
   },
   doneIcon: {
-    color: '#22c55e',
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#ffffff',
   },
   activeIcon: {
-    color: '#3b82f6',
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#ffffff',
   },
   lockedIcon: {
-    color: '#94a3b8',
+    fontSize: 24,
+    color: '#64748b',
   },
   textContainer: {
     flex: 1,
   },
-  title: {
-    fontSize: 18,
-    fontWeight: '600',
+  doneTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#ffffff',
     marginBottom: 4,
   },
-  doneText: {
-    color: '#1f2937',
+  activeTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#ffffff',
+    marginBottom: 4,
   },
-  activeText: {
-    color: '#1f2937',
+  lockedTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#64748b',
+    marginBottom: 4,
   },
-  lockedText: {
+  doneSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.9)',
+  },
+  activeSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.9)',
+  },
+  lockedSubtitle: {
+    fontSize: 14,
     color: '#94a3b8',
   },
-  subtitle: {
-    fontSize: 14,
-    color: '#6b7280',
-  },
-  statusIndicator: {
+  playButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginLeft: 12,
   },
-  indicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  doneIndicator: {
-    backgroundColor: '#22c55e',
-  },
-  activeIndicator: {
-    backgroundColor: '#3b82f6',
-  },
-  lockedIndicator: {
-    backgroundColor: '#e2e8f0',
+  playIcon: {
+    fontSize: 18,
+    color: '#ffffff',
+    marginLeft: 2,
   },
 });
