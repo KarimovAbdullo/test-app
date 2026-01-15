@@ -28,3 +28,11 @@ React Native приложение на Expo с картой развития и 
 ## Архитектура базы данных
 
 Подробная информация о структуре базы данных и SQL запросах находится в файле `DATABASE_ARCHITECTURE.md`.
+
+## Технологии
+
+- React Native
+- Expo
+- TypeScript
+- Linear Gradient
+- Toast Notifications
